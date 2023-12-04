@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "dlfcn.h": "c",
+        "msabi.h": "c",
+        "runtime.h": "c",
+        "cstdlib": "cpp",
+        "cstdint": "c",
+        "inttypes.h": "c",
+        "*.inc": "c",
+        "ios": "c",
+        "cosmo.h": "c"
+    }
+}

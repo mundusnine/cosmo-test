@@ -1,0 +1,5 @@
+Tests/**
+cosmocc/**
+*.elf
+**.com.dbg
+loader.com

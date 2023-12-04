@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug app",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/loader.com.dbg",
+        "args": ["--strace"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ],
+        "preLaunchTask": "Build app"
+      },
+      {
+        "name": "Debug knob.com",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/knob.com.dbg",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ],
+        "preLaunchTask": "Build knob"
+      }
+    ]
+  }
+  
