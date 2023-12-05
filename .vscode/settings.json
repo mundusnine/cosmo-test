@@ -8,6 +8,12 @@
         "inttypes.h": "c",
         "*.inc": "c",
         "ios": "c",
-        "cosmo.h": "c"
+        "cosmo.h": "c",
+        "fenster.h": "c",
+        "time.h": "c",
+        "features.h": "c",
+        "typeinfo": "c",
+        "chrono": "c",
+        "dll.h": "c"
     }
 }

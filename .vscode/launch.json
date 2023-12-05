@@ -5,10 +5,10 @@
         "name": "Debug app",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/loader.com.dbg",
-        "args": ["--strace"],
+        "program": "${workspaceFolder}/Deployment/calc.com.dbg",
+        "args": [],
         "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
+        "cwd": "${workspaceFolder}/Deployment",
         "environment": [],
         "setupCommands": [
           {

@@ -1,5 +1,4 @@
-Tests/**
+Deployment/**
 cosmocc/**
 *.elf
 **.com.dbg
-loader.com
