@@ -1,0 +1,3 @@
+[submodule "Libraries/fenster"]
+	path = Libraries/fenster
+	url = git@github.com:foundry2D/fenster.git
