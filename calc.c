@@ -1,65 +1,44 @@
-#include <stdio.h>
-#include <stdlib.h>
-#ifdef NOT_COSMO
-#include <dlfcn.h>
-#else
-#include <cosmo.h>
-#define _COSMO_SOURCE
-#include<libc/dlopen/dlfcn.h>
-#define dlsym cosmo_dlsym
-#define dlopen cosmo_dlopen
-#endif
-#define DLL_COMPILE
-#include "dll.h"
+#include <string.h>
+#include <assert.h>
 
-#define LOAD_FUN(name) name = dlsym(lib,#name)
-int main(int argc, char* argv[]){
-    void* lib = dlopen("./fenster.so",RTLD_LAZY);
-    if(lib == NULL){
-        fprintf(stderr,"Couldn't load windowing library,quitting the app.");
-        return 1;
-    }
-    LOAD_FUN(fenster_open);
-    LOAD_FUN(fenster_loop);
-    LOAD_FUN(fenster_close);
-    LOAD_FUN(fenster_screen_size);
-    LOAD_FUN(fenster_sleep);
-    LOAD_FUN(fenster_time);
+#include "rencache.h"
+#include "plug.h"
 
+struct Plug{
+    fenster_t fen;
+    double history[64];
+};
 
-    #define W 320
-    #define H 240
-    uint32_t buf[W * H];
-    fenster_t f = {
-        .title = "hello",
-        .width = W,
-        .height = H,
-        .buf = buf,
-    };
-    fenster_open(&f);
-    uint32_t t = 0;
-    int64_t now = fenster_time();
-    while (fenster_loop(&f) == 0) {
-        t++;
-        for (int i = 0; i < W; i++) {
-            for (int j = 0; j < H; j++) {
-                /* White noise: */
-                /* fenster_pixel(&f, i, j) = (rand() << 16) ^ (rand() << 8) ^ rand(); */
+static Plug_t* p = NULL; 
+fenster_t* plug_init(void){
+    p = malloc(sizeof(Plug_t));
+    assert(p != NULL && "Buy more RAM lol");
+    memset(p, 0, sizeof(*p));
 
-                /* Colourful and moving: */
-                /* fenster_pixel(&f, i, j) = i * j * t; */
+    fenster_t fen = {.title="cosmo-calc",.width=1280,.height=720};
+    fen.buf = malloc(sizeof(uint32_t) * fen.width * fen.height);
+    memcpy(&p->fen,&fen,sizeof(fenster_t));
+    ren_init(&p->fen);
 
-                /* Munching squares: */
-                fenster_pixel(&f, i, j) = i ^ j ^ t;
-            }
-        }
-        int64_t time = fenster_time();
-        if (time - now < 1000 / 60) {
-            fenster_sleep(time - now);
-        }
-        now = time;
-    }
-    fenster_close(&f);
-    return 0;
+    return &p->fen;
+}
 
+Plug_t *plug_pre_reload(void){
+    return p;
+}
+
+void plug_post_reload(Plug_t *pp) {
+    p = pp;
+    ren_init(&p->fen);
+}
+RenRect window_rect = {0};
+RenColor bg_color = {.r=0,.b=0,.g=0,.a=255};
+void plug_update(void){
+    window_rect.width = p->fen.width;
+    window_rect.height = p->fen.height;
+    rencache_begin_frame();
+    rencache_draw_rect(window_rect,bg_color);
+    RenColor col = {.a=255,.r=0,.b=255};
+    ren_draw_circle(p->fen.width * 0.5f,p->fen.height * 0.5f,100,col);
+    rencache_end_frame();
 }

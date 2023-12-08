@@ -2,3 +2,4 @@ Deployment/**
 cosmocc/**
 *.elf
 **.com.dbg
+bin/**

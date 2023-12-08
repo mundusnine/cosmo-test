@@ -5,19 +5,33 @@
     "tasks": [
         {
             "label": "Build knob",
-            "type": "shell",
-            "command": "${workspaceFolder}/cosmocc/bin/cosmocc",
-            "args": [
-                "-g",
-                "${workspaceFolder}/knob.c",
-                "-o",
-                "knob.com"
-            ],
+            "linux":{
+                "type": "shell",
+                "command": "${workspaceFolder}/cosmocc/bin/cosmocc",
+                "args": [
+                    "-g",
+                    "${workspaceFolder}/knob.c",
+                    "-o",
+                    "knob.com"
+                ],
+            },
+            "windows":{
+                "command": "",
+                "args": []
+            }
+            
         },
         {
             "label": "Build app",
             "type": "shell",
             "command": "${workspaceFolder}/knob.com",//"${workspaceFolder}/Tools/windows_x64/zig.exe",
+            "dependsOn": "Build knob",
+        },
+        {
+            "label": "Build dll",
+            "type": "shell",
+            "command": "${workspaceFolder}/knob.com",//"${workspaceFolder}/Tools/windows_x64/zig.exe",
+            "args": ["--dll"],
             "dependsOn": "Build knob",
             "group": {
                 "kind": "build",

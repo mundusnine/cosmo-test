@@ -6,7 +6,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/Deployment/calc.com.dbg",
-        "args": [],
+        "args": ["--strace"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}/Deployment",
         "environment": [],
