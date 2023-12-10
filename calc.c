@@ -37,7 +37,6 @@ fenster_t* plug_init(int w,int h){
     memcpy(&p->fen,&fen,sizeof(fenster_t));
     p->curr_cal.count = 0;
     knob_sb_append_cstr(&p->curr_cal,"0");
-    knob_sb_append_null(&p->curr_cal);
     init();
     return &p->fen;
 }
@@ -50,6 +49,19 @@ void plug_post_reload(Plug_t *pp) {
     p = pp;
     init();
 }
+#define CLEAR "C"
+#define PI "π"
+#define EQUAL "="
+#define SQR_RT "√"
+#define OP_PAREN "("
+#define CL_PAREN ")"
+#define MOD "mod"
+#define DIV "÷"
+#define MUL "×"
+#define SUB "-"
+#define ADD "+"
+#define SQUARED "x²"
+#define DOT "."
 RenRect window_rect = {0};
 RenColor win_bg = {.r=37,.g=37,.b=38,.a=255};
 RenColor frame_bg = {.r=51,.g=51,.b=55,.a=255};
@@ -58,17 +70,18 @@ RenColor button_hovered_col = {.r=29,.g=150,.b=237,.a=255};
 RenColor button_click_col = {.r=0,.g=119,.b=200,.a=255};
 RenColor text_color = {.r=255,.g=255,.b=255,.a=255};
 char* butt_content[5][5] = {
-    {"C","(",")","mod","π"},
-    {"7","8","9","÷","√"},
-    {"4","5","6","×","x²"},
-    {"1","2","3","-","="},
-    {"0",".","%","+","="}
+    {CLEAR,OP_PAREN,CL_PAREN,MOD,PI},
+    {"7","8","9",DIV,SQR_RT},
+    {"4","5","6",MUL,SQUARED},
+    {"1","2","3",SUB,EQUAL},
+    {"0",DOT,"%",ADD,""}
 };
 typedef struct {
     float x,y;
     int l,m,r;
 } mouse_t;
 void plug_update(void){
+    static mouse_t last_mouse = {0}; 
     mouse_t mouse = {.x=p->fen.x,.y=p->fen.y};
     mouse.l = (p->fen.mouse >> MOUSE_LEFT_BUTTON) & 1;
     mouse.m = (p->fen.mouse >> MOUSE_MIDDLE_BUTTON) & 1;
@@ -83,7 +96,12 @@ void plug_update(void){
     rencache_draw_rect(show_rect,frame_bg);
     int cal_w = ren_get_font_width(p->fonts[BIG_FONT],p->curr_cal.items,p->curr_cal.count);
     int cal_h = ren_get_font_height(p->fonts[BIG_FONT]);
-    rencache_draw_text(p->fonts[BIG_FONT],p->curr_cal.items,show_rect.width - cal_w,show_rect.y+show_rect.height-(cal_h+padding),text_color);
+    char result[256] = {0};
+    for(int i =0; i < p->curr_cal.count;++i){
+        assert(i != 256);
+        result[i] = p->curr_cal.items[i];
+    }
+    rencache_draw_text(p->fonts[BIG_FONT],result,show_rect.width - cal_w,show_rect.y+show_rect.height-(cal_h+padding),text_color);
     int grid_y = 0;
     float curr_x = show_rect.x;
     #define NUM_BUTTS 5
@@ -94,14 +112,61 @@ void plug_update(void){
     for(int i =0; i < NUM_BUTTS;){
         RenRect butt_rect = {.x=curr_x + i*(butt_w+b_pad*2.5),.y=grid_y*(butt_w+b_pad*2.5)+current_y,.width=butt_w,.height=butt_w};
         RenColor butt_col = button_col;
+        char* text = butt_content[grid_y][i];
         if(mouse.x > butt_rect.x && mouse.x < butt_rect.x + butt_rect.width && mouse.y > butt_rect.y && mouse.y < butt_rect.y + butt_rect.height){
             butt_col = button_hovered_col;
-            if(mouse.l){
+            if(mouse.l && last_mouse.l != mouse.l){
                 butt_col = button_click_col;
+                if(text == CLEAR){
+                    memset(p->curr_cal.items,0,sizeof(char) * p->curr_cal.count);
+                    p->curr_cal.count = 0;
+                    knob_sb_append_cstr(&p->curr_cal,"0");
+                }
+                else if(text == OP_PAREN){
+                    int count = p->curr_cal.count;
+                    while(count - 1 > -1 && isdigit(p->curr_cal.items[count-1])){
+                        count--;
+                    }
+                    char temp[256] = {0};
+                    int c = 0;
+                    while(count+c < p->curr_cal.count){
+                        temp[c] = p->curr_cal.items[count+c];
+                        c++;
+                    }
+                    p->curr_cal.count = count;
+                    knob_sb_append_cstr(&p->curr_cal,OP_PAREN);
+                    knob_sb_append_cstr(&p->curr_cal,temp);
+                }
+                else if(text == CL_PAREN){
+                    int isDigit = isdigit(p->curr_cal.items[p->curr_cal.count-1]);
+                    int hasOpen =0;
+                    int count = 0;
+                    while (count < p->curr_cal.count){
+                        if(p->curr_cal.items[count] == '('){
+                            hasOpen = 1;
+                            break;
+                        }
+                        count++;
+                    }
+                    if(!isDigit){
+                        //@TODO: Add error message
+                    }
+                    else if(!hasOpen){
+                        //@TODO: Add error message
+                    }
+                    else {
+                        knob_sb_append_cstr(&p->curr_cal,CL_PAREN);
+                    }
+                }
+                else {
+                    if(p->curr_cal.count == 1 && p->curr_cal.items[0] == '0' && text != DOT){
+                        p->curr_cal.count = 0;
+                    }
+                    knob_sb_append_cstr(&p->curr_cal,text);
+                }
             }
         }
         rencache_draw_rect(butt_rect,butt_col);
-        char* text = butt_content[grid_y][i];
         int button_text_w = ren_get_font_width(p->fonts[BASIC_FONT],text,strlen(text)) * 0.5f; 
         rencache_draw_text(p->fonts[BASIC_FONT],text,
             butt_rect.x+butt_rect.width*0.5f - button_text_w,//x
@@ -118,6 +183,7 @@ void plug_update(void){
 
     
     rencache_end_frame();
+    last_mouse = mouse;
 }
 
 // Theme rounded Visual Studio
