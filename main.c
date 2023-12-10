@@ -63,7 +63,9 @@ int main(int argc, char* argv[]){
         return 1;
     }
     load_fenster(lib);
-    fenster_t* f = plug_init();
+    int w,h;
+    fenster_screen_size(&w,&h);
+    fenster_t* f = plug_init(w,h);
     // f->buf = malloc(f->width * f->height);
     fenster_open(f);
     uint32_t t = 0;

@@ -39,13 +39,18 @@ MAIN(test_build){
         return 0;
     }
     cmd.count = 0;
-    // #define NOT_COSMO
+    #define NOT_COSMO
     #ifdef NOT_COSMO
     knob_cmd_append(&cmd,"cc","-DNOT_COSMO");
     #else
     knob_cmd_append(&cmd,"./cosmocc/bin/cosmocc");
     #endif
-    knob_cmd_append(&cmd,"-I./Libraries/fenster","-I./src","-g","-o","./Deployment/calc.com","main.c","hotreload.c");
+    knob_cmd_append(&cmd,"-I./Libraries/fenster","-I./src","-g","main.c","hotreload.c");
+    #ifdef NOT_COSMO
+    knob_cmd_append(&cmd,"-o","./Deployment/calc.com.dbg");
+    #else
+    knob_cmd_append(&cmd,"-o","./Deployment/calc.com");
+    #endif
     #ifndef HOTRELOAD
     knob_cmd_append(&cmd,"cacl.c","./src/renderer.c","./src/rencache.c","./src/stb_truetype.c");
     #endif

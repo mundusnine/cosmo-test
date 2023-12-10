@@ -276,7 +276,6 @@ void ren_fill_rect(RenRect rect, RenColor color) {
   int y2 = rect.y + rect.height;
   x2 = x2 > clip.right  ? clip.right  : x2;
   y2 = y2 > clip.bottom ? clip.bottom : y2;
-  printf("Pointer in dll is: %p",window->buf);
   RenColor *d = (RenColor*) window->buf;
   d += x1 + y1 * window->width;
   int dr = window->width - (x2 - x1);

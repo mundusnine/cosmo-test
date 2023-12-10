@@ -7,7 +7,7 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 typedef struct Plug Plug_t;
 #define LIST_OF_PLUGS \
-    PLUG(plug_init, fenster_t*, void) \
+    PLUG(plug_init, fenster_t*, int,int) \
     PLUG(plug_pre_reload, void*, void) \
     PLUG(plug_post_reload, void, void*) \
     PLUG(plug_update, void, void)
