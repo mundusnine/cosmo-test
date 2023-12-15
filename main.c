@@ -87,6 +87,7 @@ int main(int argc, char* argv[]){
             void *state = plug_pre_reload();
             lib = reload_libplug();
             if (!lib) return 1;
+            load_fenster(lib);
 
             plug_post_reload(state);
         }
