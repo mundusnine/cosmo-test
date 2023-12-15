@@ -7,6 +7,8 @@
 #include "rencache.h"
 #include "plug.h"
 
+//ASCII Table: https://theasciicode.com.ar/
+
 enum Fonts{
     BASIC_FONT,
     BIG_FONT,
@@ -55,13 +57,16 @@ void plug_post_reload(Plug_t *pp) {
 #define SQR_RT "√"
 #define OP_PAREN "("
 #define CL_PAREN ")"
-#define MOD "mod"
-#define DIV "÷"
-#define MUL "×"
+#define MOD "%"
+#define DIV "/"
+#define MUL "*"
 #define SUB "-"
 #define ADD "+"
 #define SQUARED "x²"
 #define DOT "."
+#define MAX_RESULT_LENGTH 256
+#define EXPONENT "xª"
+
 RenRect window_rect = {0};
 RenColor win_bg = {.r=37,.g=37,.b=38,.a=255};
 RenColor frame_bg = {.r=51,.g=51,.b=55,.a=255};
@@ -69,17 +74,106 @@ RenColor button_col = {.r=51,.g=51,.b=55,.a=255};
 RenColor button_hovered_col = {.r=29,.g=150,.b=237,.a=255};
 RenColor button_click_col = {.r=0,.g=119,.b=200,.a=255};
 RenColor text_color = {.r=255,.g=255,.b=255,.a=255};
+RenColor text_disabled_col = {.r=151,.g=151,.b=151,.a=255};
+RenColor butt_equl_col = {.r=133,.g=76,.b=199,.a=255};
+
 char* butt_content[5][5] = {
     {CLEAR,OP_PAREN,CL_PAREN,MOD,PI},
     {"7","8","9",DIV,SQR_RT},
     {"4","5","6",MUL,SQUARED},
     {"1","2","3",SUB,EQUAL},
-    {"0",DOT,"%",ADD,""}
+    {"0",DOT,EXPONENT,ADD,""}
 };
+
+int IsOp(char c){
+    if(c == '+' || c == '-' || c == 'm'/* mod*/ || c == '*' || c == '/' || c == '^'){
+        return 1;
+    }
+    return 0;
+}
+
 typedef struct {
     float x,y;
     int l,m,r;
 } mouse_t;
+double calc(char* left, char* right, char op){
+    char* end;
+    double num0 = strtod(left,&end);
+    double num1 = strtod(right,&end);
+    double res = 0.0;
+    if(op == '+'){
+        res = num0 + num1;
+    }
+    else if(op == '-'){
+        res = num0 - num1;
+    }
+    else if(op == '*'){
+        res = num0 * num1;
+    }
+    else if(op == '/'){
+        res = num0 / num1;
+    }
+    else if(op == '^'){
+        res = num0;
+        for(int i = num1-1;i > 0; --i){
+            res *= num0;
+        }
+    }
+    return res;
+}
+void parse_and_calc(char* curr,size_t curr_len,char* result){
+    
+    char num[64] = {0};
+    int num_len = 0;
+    double nums[2] = {0};
+    char lastOp = '\0';
+    for(int i=0; i < curr_len;++i){
+        if(IsOp(curr[i])){
+            if(result[0] == '\0'){
+                strcpy(result,num);
+            }
+            if(lastOp != '\0'){
+                double res = calc(result,num,lastOp);
+                snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+            }
+            lastOp = curr[i];
+            memset(num,0,num_len);
+            num_len = 0;
+        }
+        else if((unsigned char)curr[i] == (unsigned char)'²'){
+            if(result[0] == '\0'){
+                strcpy(result,num);
+            }
+            lastOp = '*';
+        }
+        else {
+            num[num_len++] = curr[i];
+        }
+    }
+    if(lastOp != '\0'){
+        double res = calc(result,num,lastOp);
+        snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+    }
+    
+    //Filter out 0's
+    int dotPos = -1;
+    int i =0;
+    while(result[i] != '\0'){
+        if(result[i] == '.'){
+            dotPos =i;
+        }
+        else if(dotPos > 0 && result[i] != '0'){
+            dotPos = -1;
+            break;
+        }
+        ++i;
+    }
+    i = dotPos;
+    while(result[i] != '\0'){
+        result[i] = '\0';
+        ++i;
+    }
+}
 void plug_update(void){
     static mouse_t last_mouse = {0}; 
     mouse_t mouse = {.x=p->fen.x,.y=p->fen.y};
@@ -109,10 +203,20 @@ void plug_update(void){
     float butt_w = p->fen.width / NUM_BUTTS - (b_pad *  NUM_BUTTS);
     float current_y = show_rect.height+show_rect.y+padding;
     int button_text_h = ren_get_font_height(p->fonts[BASIC_FONT]) * 0.5f;
+    char* pi = PI;
+
     for(int i =0; i < NUM_BUTTS;){
-        RenRect butt_rect = {.x=curr_x + i*(butt_w+b_pad*2.5),.y=grid_y*(butt_w+b_pad*2.5)+current_y,.width=butt_w,.height=butt_w};
-        RenColor butt_col = button_col;
         char* text = butt_content[grid_y][i];
+        if(text[0] == '\0'){
+            goto ITERATE;
+        }
+        float butt_h = butt_w; 
+        RenColor butt_col = button_col;
+        if(text[0] == '='){
+            butt_h = butt_h * 2.0f + b_pad * 3.0f;
+            butt_col = butt_equl_col;
+        }
+        RenRect butt_rect = {.x=curr_x + i*(butt_w+b_pad*2.5),.y=grid_y*(butt_w+b_pad*2.5)+current_y,.width=butt_w,.height=butt_h};
         if(mouse.x > butt_rect.x && mouse.x < butt_rect.x + butt_rect.width && mouse.y > butt_rect.y && mouse.y < butt_rect.y + butt_rect.height){
             butt_col = button_hovered_col;
             if(mouse.l && last_mouse.l != mouse.l){
@@ -124,7 +228,7 @@ void plug_update(void){
                 }
                 else if(text == OP_PAREN){
                     int count = p->curr_cal.count;
-                    while(count - 1 > -1 && isdigit(p->curr_cal.items[count-1])){
+                    while(count - 1 > -1 && (isdigit(p->curr_cal.items[count-1]) || p->curr_cal.items[count-1] == '.')){
                         count--;
                     }
                     char temp[256] = {0};
@@ -158,8 +262,62 @@ void plug_update(void){
                         knob_sb_append_cstr(&p->curr_cal,CL_PAREN);
                     }
                 }
+                else if(text == EQUAL){
+                    int isDigit = isdigit(p->curr_cal.items[p->curr_cal.count-1]);
+                    int hasOp = 0;
+                    int count = 0;
+                    while (count < p->curr_cal.count){
+                        char c = p->curr_cal.items[count];
+                        if(IsOp(c)){
+                            hasOp = 1;
+                            break;
+                        }
+                        else if((unsigned char)c == (unsigned char)'²' && count >= 2){
+                            hasOp = 1;
+                            isDigit = isdigit(p->curr_cal.items[count-2]);
+                            break;
+                        }
+                        count++;
+                    }
+                    if(!isDigit){
+                        //@TODO: Add error message
+                    }
+                    else if(!hasOp){
+                        //@TODO: Add error message
+                    }
+                    else {
+                        //@TODO: Append history
+                        char res[MAX_RESULT_LENGTH] = {0}; 
+                        parse_and_calc(p->curr_cal.items,p->curr_cal.count, res);
+                        memset(p->curr_cal.items,0,sizeof(char) * p->curr_cal.count);
+                        p->curr_cal.count = 0;
+                        knob_sb_append_cstr(&p->curr_cal,res);
+                    }
+                }
                 else {
-                    if(p->curr_cal.count == 1 && p->curr_cal.items[0] == '0' && text != DOT){
+                    int hasDot = 0;
+                    if(text == DOT){
+                        for(int y=0; y < p->curr_cal.count; ++y){
+                            if(p->curr_cal.items[y] == '.'){
+                                hasDot = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if(text == SQUARED){
+                        char lastC = p->curr_cal.items[p->curr_cal.count-1];
+                        if(!isdigit(lastC)){
+                            goto ITERATE;
+                        }
+                        text = &text[1];
+                    }
+                    if((IsOp(p->curr_cal.items[p->curr_cal.count-1]) && IsOp(text[0])) || hasDot ){
+                        goto ITERATE;
+                    }
+                    if(text == EXPONENT){
+                        text = "^";
+                    }
+                    if(p->curr_cal.count == 1 && p->curr_cal.items[0] == '0' && text != DOT && isdigit(text[0])){
                         p->curr_cal.count = 0;
                     }
                     knob_sb_append_cstr(&p->curr_cal,text);
@@ -173,6 +331,7 @@ void plug_update(void){
             butt_rect.y+butt_rect.height*0.5f - button_text_h, //y
             text_color
         );
+        ITERATE:
         ++i;
         if(i >= NUM_BUTTS && grid_y + 1 < NUM_BUTTS){
             grid_y++;
@@ -180,6 +339,13 @@ void plug_update(void){
         }
     }
 
+    RenRect rect = {0};
+    rect.x = 100;
+    rect.y = 100;
+    rect.width = 200;
+    rect.height = 200;
+    RenColor red = {0};
+    red.r = red.a = 255;
 
     
     rencache_end_frame();
