@@ -8,6 +8,7 @@
 #define dlclose dynlib_unload
 #define dlerror() dynlib_last_err
 #else
+#define DLL_NAME ".so"
 #include <cosmo.h>
 #define _COSMO_SOURCE
 #include<libc/dlopen/dlfcn.h>
