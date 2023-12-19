@@ -14,22 +14,30 @@ MAIN(test_build){
         return 1;
     }
     Knob_Cmd cmd = {0};
-    //Build .so
+    //Build .so+
     //@TODO: Replace by zig
+    char* dll_ext = ".so";
+    if(IsWindows()){
+        dll_ext = ".dll";
+        knob_cmd_append(&cmd,"./zig/zig.exe");
+    }
     knob_cmd_append(&cmd,"cc","-I./Libraries/fenster","-I./src","-ggdb3","-shared","-fPIC","./src/dll.c");
     if(IsLinux()){
         knob_cmd_append(&cmd,"-lX11","-lasound");
     }
     else if(IsWindows()){
+        knob_cmd_append(&cmd,"-std=c11", "-fno-sanitize=undefined","-fno-omit-frame-pointer");
+        knob_cmd_append(&cmd, "-target");
+        knob_cmd_append(&cmd, "x86_64-windows");
         knob_cmd_append(&cmd,"-lgdi32","-lwinmm");
     }
     else if(IsXnu()){
         knob_cmd_append(&cmd,"-framework","Cocoa","-framework","AudioToolbox");
     }
     #ifdef HOTRELOAD
-    knob_cmd_append(&cmd,"calc.c","./src/renderer.c","./src/rencache.c","-o","./Deployment/libplug.so");
+    knob_cmd_append(&cmd,"calc.c","./src/renderer.c","./src/rencache.c","-o",knob_temp_sprintf("./Deployment/libplug%s", dll_ext));
     #else
-    knob_cmd_append(&cmd,"-o","./Deployment/fenster.so");
+    knob_cmd_append(&cmd,"-o",knob_temp_sprintf("./Deployment/fenster%s", dll_ext));
     #endif
     if(!knob_cmd_run_sync(cmd)){
         knob_log(KNOB_ERROR,"Failed build of library.");
@@ -41,12 +49,18 @@ MAIN(test_build){
     cmd.count = 0;
     #define NOT_COSMO
     #ifdef NOT_COSMO
+    if(IsWindows()){
+        knob_cmd_append(&cmd,"./zig/zig.exe");
+    }
     knob_cmd_append(&cmd,"cc","-DNOT_COSMO");
     #else
     knob_cmd_append(&cmd,"./cosmocc/bin/cosmocc");
     #endif
     knob_cmd_append(&cmd,"-I./Libraries/fenster","-I./src","-g","main.c","hotreload.c");
     #ifdef NOT_COSMO
+    if(IsWindows()){
+        knob_cmd_append(&cmd,"-ggdb3", "-std=c11", "-fno-sanitize=undefined","-fno-omit-frame-pointer");
+    }
     knob_cmd_append(&cmd,"-o","./Deployment/calc.com.dbg");
     #else
     knob_cmd_append(&cmd,"-o","./Deployment/calc.com");

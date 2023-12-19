@@ -246,7 +246,7 @@ typedef enum {
 } Knob_Target;
 
 static_assert(5 == COUNT_TARGETS, "Amount of targets have changed");
-const char *target_names[] = {
+static const char *target_names[] = {
     [TARGET_LINUX]       = "linux",
     [TARGET_LINUX_MUSL]  = "linux-musl",
     [TARGET_WIN64_MINGW] = "win64-mingw",
@@ -264,7 +264,7 @@ typedef enum {
 } Knob_Compiler;
 
 static_assert(4 == COUNT_COMPILERS, "Amount of compilers have changed");
-const char *compiler_names[][2] = {
+static const char *compiler_names[][2] = {
     [COMPILER_ZIG]      = {"zig","cc"},
     [COMPILER_CLANG]    = {"clang","-L/dev/null"},
     [COMPILER_GCC]      = {"gcc","-L/dev/null"},
@@ -474,7 +474,7 @@ typedef void (*func_ptr)(void);
 
 void* dynlib_load(const char *dllfile);
 int dynlib_unload(void *handle);
-func_ptr dynlib_loadfunc(void *handle, const char *name);
+void* dynlib_loadfunc(void *handle, const char *name);
 
 // dynlib.h HEADER END ////////////////////////////////////////
 
@@ -1442,13 +1442,13 @@ int dynlib_unload(void *handle){
     }
     return 0;
 }
-func_ptr dynlib_loadfunc(void *handle, const char *name){
+void* dynlib_loadfunc(void *handle, const char *name){
     void *symbol = (void *)GetProcAddress((HMODULE)handle, name);
     if(symbol == NULL){
         setbuf(stderr,dynlib_last_err);
         fprintf(stderr,"Failed loading func %s",name);
     }
-    return (func_ptr)symbol;
+    return symbol;
 }
 #else
 #if defined(__linux__)
@@ -1513,7 +1513,7 @@ int dynlib_unload(void *handle)
     return 0;
 }
 
-func_ptr dynlib_loadfunc(void *handle, const char *name)
+void* dynlib_loadfunc(void *handle, const char *name)
 {
     void *symbol = dlsym(handle, name);
     if (symbol == NULL) {
@@ -1525,7 +1525,7 @@ func_ptr dynlib_loadfunc(void *handle, const char *name)
             fprintf(stderr,"Failed loading %s: %s\n", name, dlerror());
         }
     }
-    return (func_ptr)symbol;
+    return symbol;
 }
 #endif
 // dynlib.h SOURCE END ////////////////////////////////////////

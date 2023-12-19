@@ -1,7 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef NOT_COSMO
-#include <dlfcn.h>
+#define KNOB_IMPLEMENTATION
+#include "knob.h"
+#define dlsym dynlib_loadfunc
+#define dlopen dynlib_load
+#define dlclose dynlib_unload
+#define dlerror() dynlib_last_err
 #else
 #include <cosmo.h>
 #define _COSMO_SOURCE
@@ -64,6 +69,7 @@ int main(int argc, char* argv[]){
     }
     load_fenster(lib);
     int w,h;
+    //@TODO: Fix linux behaviour, we get the two diplay's size together instead of just the current Display.
     fenster_screen_size(&w,&h);
     fenster_t* f = plug_init(w,h);
     // f->buf = malloc(f->width * f->height);

@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
       {
-        "name": "Debug app",
+        "name": "Debug app(Linux)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/Deployment/calc.com.dbg",
@@ -18,6 +18,16 @@
           }
         ],
         "preLaunchTask": "Build app"
+      },
+      {
+        "name": "Debug app(Windows)",
+        "type": "cppvsdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/Deployment/calc.com.dbg",
+        "args": ["--strace"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/Deployment",
+        "environment": [],
       },
       {
         "name": "Debug knob.com",

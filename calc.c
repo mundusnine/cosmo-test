@@ -140,7 +140,7 @@ void parse_and_calc(char* curr,size_t curr_len,char* result){
             memset(num,0,num_len);
             num_len = 0;
         }
-        else if((unsigned char)curr[i] == (unsigned char)'²'){
+        else if((unsigned char)curr[i] == (unsigned char)L'²'){
             if(result[0] == '\0'){
                 strcpy(result,num);
             }
@@ -272,7 +272,7 @@ void plug_update(void){
                             hasOp = 1;
                             break;
                         }
-                        else if((unsigned char)c == (unsigned char)'²' && count >= 2){
+                        else if((unsigned char)c == (unsigned char)L'²' && count >= 2){
                             hasOp = 1;
                             isDigit = isdigit(p->curr_cal.items[count-2]);
                             break;
