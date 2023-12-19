@@ -3,3 +3,5 @@ cosmocc/**
 *.elf
 **.com.dbg
 bin/**
+.bash_history
+zig/**
