@@ -23,7 +23,10 @@ MAIN(test_build){
     }
     knob_cmd_append(&cmd,"cc","-I./Libraries/fenster","-I./src","-ggdb3","-shared","-fPIC","./src/dll.c");
     if(IsLinux()){
-        knob_cmd_append(&cmd,"-lX11","-lasound");
+        //@TODO: Add wayland support when wayland is supported for NVIDIA GPU's...
+        // knob_cmd_append(&cmd,"-lwayland-client");
+        knob_cmd_append(&cmd,"-lX11","-lXinerama");
+        knob_cmd_append(&cmd,"-lasound");
     }
     else if(IsWindows()){
         knob_cmd_append(&cmd,"-std=c11", "-fno-sanitize=undefined","-fno-omit-frame-pointer");

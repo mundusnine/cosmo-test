@@ -34,7 +34,7 @@ fenster_t* plug_init(int w,int h){
     assert(p != NULL && "Buy more RAM lol");
     memset(p, 0, sizeof(*p));
 
-    fenster_t fen = {.title="cosmo-calc",.width=w*0.15f,.height=h*0.6f};
+    fenster_t fen = {.title="cosmo-calc",.width=w*0.25f,.height=h*0.6f};
     fen.buf = malloc(sizeof(uint32_t) * fen.width * fen.height);
     memcpy(&p->fen,&fen,sizeof(fenster_t));
     p->curr_cal.count = 0;
