@@ -105,6 +105,7 @@ typedef struct {
     int l,m,r;
 } mouse_t;
 double calc(char* left, char* right, char op){
+    // if(right[0] == '\0') return 0;
     char* end;
     double num0 = left[0] != '\0' ? strtod(left,&end) : 0;
     double num1 = strtod(right,&end);
@@ -141,6 +142,7 @@ struct OpNode{
     char* left;
     char* right;
     char* op;
+    int switched;
     OpNode_t* next;
     OpNode_t* last;
 };
@@ -167,6 +169,7 @@ int OpPriority(char left,char right){
 }
 void addNode(OpNodeList* list, char* left, char* right, char* op){
     OpNode_t* node = knob_temp_alloc(sizeof(OpNode_t));
+    node->switched =0;
     node->left = knob_temp_strdup(left);
     node->right = knob_temp_strdup(right);
     node->op = knob_temp_strdup(op);
@@ -191,10 +194,7 @@ void parse_and_calc(char* curr,size_t curr_len,char* result){
             num_len = 0;
         }
         if(IsOp(curr[i])){
-            if(result[0] == '\0'){
-                strcpy(result,num);
-            }
-            else if(lastOp[0] != '\0' && num_len > 0){
+            if(lastOp[0] != '\0' && num_len > 0){
                 if(lastOp[0] != 's'){
                     addNode(&list,result,num,lastOp);
                     memset(result,0,strlen(result));
@@ -207,6 +207,9 @@ void parse_and_calc(char* curr,size_t curr_len,char* result){
                     lastOp[1] = '\0';
                     addNode(&list,"",num,lastOp);
                 }
+            }
+            else if(result[0] == '\0'){
+                strcpy(result,num);
             }
             lastOp[0] = curr[i];
             memset(num,0,num_len);
@@ -237,6 +240,7 @@ void parse_and_calc(char* curr,size_t curr_len,char* result){
             lastOp[1] = '\0';
             addNode(&list,"",result,lastOp);
         }
+        memset(result,0,strlen(result));
     }
     //@TODO: Using a doubly-linked list works, but it's overengineered IMO.
     // Have a look at doing this in a better way in the futur. Doing test's would invariably show that it doesn't always work
@@ -249,31 +253,41 @@ void parse_and_calc(char* curr,size_t curr_len,char* result){
             if(curr->next != NULL && OpPriority(curr->op[0],curr->next->op[0])){
                 OpNode_t* priority = curr->next; 
                 curr->next = priority->next;
-                if(curr->next != NULL){
-                    curr->next->last = curr;
-                }
                 priority->next = curr;
-                priority->last = curr->last;
-                if(priority->last != NULL){
-                    priority->last->next = priority;
+                if(curr->last != NULL){
+                    curr->last->next = priority;
                 }
+                curr->last = priority;
                 if(curr == first){
                     first = priority;
                 }
-                priority->left = curr->right;
-                curr->right = curr->left;
+                if(!curr->switched){
+                    priority->left = curr->right;
+                    curr->right = curr->left;
+                    curr->left = "";
+                }
+                curr->switched = 1;
             }
-            curr = curr->next;
+            else {
+                curr = curr->next;
+            }
         }
     }
     if(first != NULL){
         OpNode_t* curr = first;
-        char* left = first->left;
         double res = 0.0;
         while(curr != NULL){
+            char * left = curr->left;
+            double lastRes = 0.0;
+            if(knob_cstr_match(curr->left,"")){
+                left = result; 
+            }
+            else {
+                char* endptr;
+                lastRes = strtod(result,&endptr);
+            }
             res = calc(left,curr->right,curr->op[0]);
-            snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
-            left = result;
+            snprintf(result,MAX_RESULT_LENGTH,"%.9f",res + lastRes);
             curr = curr->next;
         }
     }

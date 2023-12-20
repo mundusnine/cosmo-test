@@ -23,6 +23,7 @@
         "renderer.h": "c",
         "random": "c",
         "__tuple": "c",
-        "array": "c"
+        "array": "c",
+        "stat.h": "c"
     }
 }

@@ -1,4 +1,6 @@
 Deployment/**
+build/**
+!build/plug.h
 cosmocc/**
 *.elf
 **.com**
