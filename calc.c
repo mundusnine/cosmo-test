@@ -1,4 +1,5 @@
 #include <string.h>
+#include <math.h>
 #include <assert.h>
 
 #define KNOB_IMPLEMENTATION
@@ -29,6 +30,11 @@ void init(void){
     }
     ren_init(&p->fen);
 }
+void deinit(void){
+    for(int i = 0; i < NUM_FONTS;++i){
+        ren_free_font(p->fonts[i]);
+    }
+}
 fenster_t* plug_init(int w,int h){
     p = malloc(sizeof(Plug_t));
     assert(p != NULL && "Buy more RAM lol");
@@ -44,6 +50,7 @@ fenster_t* plug_init(int w,int h){
 }
 
 Plug_t *plug_pre_reload(void){
+    deinit();
     return p;
 }
 
@@ -53,6 +60,7 @@ void plug_post_reload(Plug_t *pp) {
 }
 #define CLEAR "C"
 #define PI "π"
+#define PI_NUM 3.141592653
 #define EQUAL "="
 #define SQR_RT "√"
 #define OP_PAREN "("
@@ -86,7 +94,7 @@ char* butt_content[5][5] = {
 };
 
 int IsOp(char c){
-    if(c == '+' || c == '-' || c == 'm'/* mod*/ || c == '*' || c == '/' || c == '^'){
+    if(c == '+' || c == '-' || c == '%' || c == '*' || c == '/' || c == '^'){
         return 1;
     }
     return 0;
@@ -98,7 +106,7 @@ typedef struct {
 } mouse_t;
 double calc(char* left, char* right, char op){
     char* end;
-    double num0 = strtod(left,&end);
+    double num0 = left[0] != '\0' ? strtod(left,&end) : 0;
     double num1 = strtod(right,&end);
     double res = 0.0;
     if(op == '+'){
@@ -119,42 +127,157 @@ double calc(char* left, char* right, char op){
             res *= num0;
         }
     }
+    else if(op == '%'){
+        res = (int)num0 % (int)num1;
+    }
+    else if(op == 's'){
+
+        res = sqrt(num1);
+    }
     return res;
 }
+typedef struct OpNode OpNode_t;
+struct OpNode{
+    char* left;
+    char* right;
+    char* op;
+    OpNode_t* next;
+    OpNode_t* last;
+};
+typedef struct {
+    OpNode_t** items;
+    size_t count;
+    size_t capacity;
+} OpNodeList;
+
+typedef enum {
+    AS,
+    MD,
+    E,
+    P
+} OpType;
+int OpPriority(char left,char right){
+    OpType ltype = (left == '+' || left == '-') ? AS : (left == '*' || left == '/' || left == '%') ? MD : E;
+    OpType rtype = (right == '+' || right == '-') ? AS : (right == '*' || right == '/' || right == '%') ? MD : E;  
+    if(ltype < rtype){
+        return 1;
+    }
+    return 0;
+
+}
+void addNode(OpNodeList* list, char* left, char* right, char* op){
+    OpNode_t* node = knob_temp_alloc(sizeof(OpNode_t));
+    node->left = knob_temp_strdup(left);
+    node->right = knob_temp_strdup(right);
+    node->op = knob_temp_strdup(op);
+    node->last = node->next = NULL;
+    if(list->count > 0){
+        node->last = list->items[list->count-1];
+        node->last->next = node;
+    }
+    knob_da_append(list,node);
+}
 void parse_and_calc(char* curr,size_t curr_len,char* result){
-    
+    OpNodeList list = {0};
     char num[64] = {0};
     int num_len = 0;
     double nums[2] = {0};
-    char lastOp = '\0';
+    char lastOp[2] = {0};
     for(int i=0; i < curr_len;++i){
+        if(strcmp(num,SQR_RT) == 0){
+            lastOp[1] = lastOp[0];
+            lastOp[0] = 's';
+            memset(num,0,num_len);
+            num_len = 0;
+        }
         if(IsOp(curr[i])){
             if(result[0] == '\0'){
                 strcpy(result,num);
             }
-            if(lastOp != '\0'){
-                double res = calc(result,num,lastOp);
-                snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+            else if(lastOp[0] != '\0' && num_len > 0){
+                if(lastOp[0] != 's'){
+                    addNode(&list,result,num,lastOp);
+                    memset(result,0,strlen(result));
+                    memset(num,0,num_len);
+                }
+                else {
+                    double res = calc("",num,'s');
+                    snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+                    lastOp[0] = lastOp[1];
+                    lastOp[1] = '\0';
+                    addNode(&list,"",num,lastOp);
+                }
             }
-            lastOp = curr[i];
+            lastOp[0] = curr[i];
             memset(num,0,num_len);
             num_len = 0;
         }
         else if((unsigned char)curr[i] == (unsigned char)L'²'){
-            if(result[0] == '\0'){
-                strcpy(result,num);
-            }
-            lastOp = '*';
+            lastOp[0] = '+';
+            double res = calc(num,"2",'^');
+            snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+            addNode(&list,"",result,lastOp);
+            memset(result,0,strlen(result));
+            memset(num,0,num_len);
+            num_len = 0;
+            lastOp[0] = '\0';
         }
         else {
             num[num_len++] = curr[i];
         }
     }
-    if(lastOp != '\0'){
-        double res = calc(result,num,lastOp);
-        snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+    if(lastOp[0] != '\0'){
+        if(lastOp[0] != 's'){
+            addNode(&list,result,num,lastOp);
+        }
+        else {
+            double res = calc("",num,'s');
+            snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+            lastOp[0] = lastOp[1] != '\0' ? lastOp[1] : '+';
+            lastOp[1] = '\0';
+            addNode(&list,"",result,lastOp);
+        }
     }
-    
+    //@TODO: Using a doubly-linked list works, but it's overengineered IMO.
+    // Have a look at doing this in a better way in the futur. Doing test's would invariably show that it doesn't always work
+    // Also, it's not really easily readable...
+    OpNode_t* first = NULL;    
+    if(list.count > 0){
+        first = list.items[0];
+        OpNode_t* curr = first;
+        while(curr != NULL){
+            if(curr->next != NULL && OpPriority(curr->op[0],curr->next->op[0])){
+                OpNode_t* priority = curr->next; 
+                curr->next = priority->next;
+                if(curr->next != NULL){
+                    curr->next->last = curr;
+                }
+                priority->next = curr;
+                priority->last = curr->last;
+                if(priority->last != NULL){
+                    priority->last->next = priority;
+                }
+                if(curr == first){
+                    first = priority;
+                }
+                priority->left = curr->right;
+                curr->right = curr->left;
+            }
+            curr = curr->next;
+        }
+    }
+    if(first != NULL){
+        OpNode_t* curr = first;
+        char* left = first->left;
+        double res = 0.0;
+        while(curr != NULL){
+            res = calc(left,curr->right,curr->op[0]);
+            snprintf(result,MAX_RESULT_LENGTH,"%.9f",res);
+            left = result;
+            curr = curr->next;
+        }
+    }
+    knob_temp_reset();
     //Filter out 0's
     int dotPos = -1;
     int i =0;
@@ -263,19 +386,30 @@ void plug_update(void){
                     }
                 }
                 else if(text == EQUAL){
-                    int isDigit = isdigit(p->curr_cal.items[p->curr_cal.count-1]);
+                    char c = p->curr_cal.items[p->curr_cal.count-1];
+                    int isDigit = isdigit(c);
                     int hasOp = 0;
                     int count = 0;
+                    char sub[4] = {0};
                     while (count < p->curr_cal.count){
-                        char c = p->curr_cal.items[count];
+                        c = p->curr_cal.items[count];
                         if(IsOp(c)){
                             hasOp = 1;
-                            break;
+                            // break;
                         }
                         else if((unsigned char)c == (unsigned char)L'²' && count >= 2){
                             hasOp = 1;
                             isDigit = isdigit(p->curr_cal.items[count-2]);
                             break;
+                        }
+                        else if(strcmp(sub,SQR_RT) == 0 && count >= 3){
+                            hasOp = 1;
+                            isDigit = p->curr_cal.count > count && isdigit(p->curr_cal.items[count]);
+                            break;
+                        }
+                        int sub_len = strlen(sub);
+                        if(sub_len < 4){
+                            sub[sub_len] = c;
                         }
                         count++;
                     }
@@ -320,7 +454,27 @@ void plug_update(void){
                     if(p->curr_cal.count == 1 && p->curr_cal.items[0] == '0' && text != DOT && isdigit(text[0])){
                         p->curr_cal.count = 0;
                     }
-                    knob_sb_append_cstr(&p->curr_cal,text);
+                    if(text == SQR_RT){
+                        char lastC = p->curr_cal.items[p->curr_cal.count-1];
+                        if(!isdigit(lastC)){
+                            goto ITERATE;
+                        }
+                        char num[64] = {0};
+                        int lastCount = p->curr_cal.count;
+                        char op = '\0';
+                        while(p->curr_cal.count > 0 && !IsOp(op)){
+                            op = p->curr_cal.items[--p->curr_cal.count];
+                        }
+                        if(IsOp(op)){
+                            p->curr_cal.count++;
+                        }
+                        memcpy(num,&p->curr_cal.items[p->curr_cal.count],lastCount);
+                        knob_sb_append_cstr(&p->curr_cal,text);
+                        knob_sb_append_cstr(&p->curr_cal,num);
+                    }
+                    else {
+                        knob_sb_append_cstr(&p->curr_cal,text);
+                    }
                 }
             }
         }

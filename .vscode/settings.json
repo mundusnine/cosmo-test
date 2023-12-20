@@ -21,6 +21,8 @@
         "string.h": "c",
         "assert.h": "c",
         "renderer.h": "c",
-        "random": "c"
+        "random": "c",
+        "__tuple": "c",
+        "array": "c"
     }
 }

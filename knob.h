@@ -1510,7 +1510,8 @@ int dynlib_unload(void *handle)
     //     }
     //     return count ==1;
     // }
-    return 0;
+    int res = dlclose(handle);
+    return res == 0;
 }
 
 void* dynlib_loadfunc(void *handle, const char *name)
