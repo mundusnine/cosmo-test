@@ -1,7 +1,7 @@
 Deployment/**
 cosmocc/**
 *.elf
-**.com.dbg
+**.com**
 bin/**
 .bash_history
 zig/**
