@@ -28,6 +28,14 @@
             "dependsOn": "Build knob",
         },
         {
+            "label": "Build gf",
+            "type": "shell",
+            "command": "${workspaceFolder}/gf/build.sh",//"${workspaceFolder}/Tools/windows_x64/zig.exe",
+            "options": {
+                "cwd": "${workspaceFolder}/gf"
+            }
+        },
+        {
             "label": "Build dll",
             "type": "shell",
             "command": "${workspaceFolder}/knob.com",//"${workspaceFolder}/Tools/windows_x64/zig.exe",

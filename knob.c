@@ -95,6 +95,57 @@ MAIN(STAGE_1){
     char* program = knob_shift_args(&argc,&argv);
     if (!knob_mkdir_if_not_exists("build")) return 1;
 
+    //@TODO: Should we add this option to knob, or is this too niche ?
+    //Gf configuration START
+    char curr_path[260] = {0};
+    char gf_config[260] = {0};
+    char* home = NULL;
+    if(IsWindows()){
+        home = "USERPROFILE";
+    }
+    else{
+        home = "HOME";
+    }
+    snprintf(gf_config,260,"%s/%s",getenv(home),".config/gf2_config.ini");
+    if(getcwd(curr_path,260) != NULL){
+        strncat(curr_path,"/build/gf_pipe.dat",259);
+        Knob_String_Builder sb = {0};
+        if(knob_read_entire_file(gf_config,&sb)){
+            char* pos = strstr(sb.items,"[pipe]");
+            if(pos == NULL){
+                knob_sb_append_cstr(&sb,"[pipe]\n");
+                knob_sb_append_cstr(&sb,"control=");
+                knob_sb_append_buf(&sb,curr_path,260);
+                knob_sb_append_cstr(&sb,"\n");
+            }
+            else {
+                pos+=7;
+                int s = pos - sb.items;
+                while(s != sb.count){
+                    sb.items[--sb.count] = '\0';
+                }
+                knob_sb_append_cstr(&sb,"control=");
+                knob_sb_append_buf(&sb,curr_path,260);
+                knob_sb_append_cstr(&sb,"\n");
+            }
+            if(knob_write_entire_file(gf_config,sb.items,sb.count)){
+                knob_log(KNOB_INFO,"Configured gf to use piped: %s",curr_path);
+            }
+        }
+        if(!knob_file_exists(curr_path)){
+            knob_log(KNOB_INFO, "Generating %s for gf pipe system\n",curr_path);
+            Knob_Cmd cmd ={0};
+            knob_cmd_append(&cmd,"mkfifo",curr_path);
+            if(!knob_cmd_run_sync(cmd)){
+                knob_log(KNOB_INFO, "Failed creating %s for gf pipe system\n",curr_path);
+            }
+            //@TODO: cosmo doesn't seem to have mknod even if it's declared....
+            // mknod(curr_path,S_IRWXU | S_IFIFO,0); // mkfifo
+        }
+    }
+    //Gf configuration END
+
+
     Knob_Cmd cmd = {0};
     int config_exists = knob_file_exists(CONFIG_PATH);
     int plug_exists = knob_file_exists(PLUG_PATH);

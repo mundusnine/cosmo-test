@@ -20,6 +20,24 @@
         "preLaunchTask": "Build app"
       },
       {
+        "name": "Debug gf(Linux)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/gf/gf2",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/gf",
+        "environment": [],
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ],
+        "preLaunchTask": "Build gf"
+      },
+      {
         "name": "Debug app(Windows)",
         "type": "cppvsdbg",
         "request": "launch",

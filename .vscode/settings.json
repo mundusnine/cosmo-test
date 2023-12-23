@@ -24,6 +24,7 @@
         "random": "c",
         "__tuple": "c",
         "array": "c",
-        "stat.h": "c"
+        "stat.h": "c",
+        "cstring": "c"
     }
 }
