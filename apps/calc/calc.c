@@ -514,7 +514,6 @@ void plug_update(void){
     rect.height = 200;
     RenColor red = {0};
     red.r = red.a = 255;
-
     
     rencache_end_frame();
     last_mouse = mouse;
