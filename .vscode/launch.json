@@ -20,6 +20,24 @@
         "preLaunchTask": "Build app"
       },
       {
+        "name": "Debug knob.com",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/knob.com.dbg",
+        "args": ["--app","calc"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ],
+        "preLaunchTask": "Build knob"
+      },
+      {
         "name": "Debug gf(Linux)",
         "type": "cppdbg",
         "request": "launch",
@@ -46,24 +64,6 @@
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}/Deployment",
         "environment": [],
-      },
-      {
-        "name": "Debug knob.com",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/knob.com.dbg",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "setupCommands": [
-          {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-          }
-        ],
-        "preLaunchTask": "Build knob"
       }
     ]
   }

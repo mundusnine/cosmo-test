@@ -24,27 +24,28 @@
         {
             "label": "Build app",
             "type": "shell",
-            "command": "${workspaceFolder}/knob.com",//"${workspaceFolder}/Tools/windows_x64/zig.exe",
+            "command": "${workspaceFolder}/knob.com",
+            "args": ["--app","todo"],
             "dependsOn": "Build knob",
-        },
-        {
-            "label": "Build gf",
-            "type": "shell",
-            "command": "${workspaceFolder}/gf/build.sh",//"${workspaceFolder}/Tools/windows_x64/zig.exe",
-            "options": {
-                "cwd": "${workspaceFolder}/gf"
-            }
         },
         {
             "label": "Build dll",
             "type": "shell",
-            "command": "${workspaceFolder}/knob.com",//"${workspaceFolder}/Tools/windows_x64/zig.exe",
-            "args": ["--dll"],
+            "command": "${workspaceFolder}/knob.com",
+            "args": ["--dll","--app","todo"],
             "dependsOn": "Build knob",
             "group": {
                 "kind": "build",
                 "isDefault": true
             }
-        }
+        },
+        {
+            "label": "Build gf",
+            "type": "shell",
+            "command": "${workspaceFolder}/gf/build.sh",
+            "options": {
+                "cwd": "${workspaceFolder}/gf"
+            }
+        },
     ]
 }
