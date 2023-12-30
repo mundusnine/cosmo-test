@@ -8,6 +8,8 @@
 
 #include "rencache.h"
 #include "plug.h"
+#define INPUT_IMPL
+#include "input.h"
 
 enum Fonts{
     BASIC_FONT,
@@ -56,11 +58,6 @@ void plug_post_reload(Plug_t *pp) {
     init();
 }
 
-typedef struct {
-    float x,y;
-    int l,m,r;
-} mouse_t;
-
 RenRect window_rect = {0};
 RenColor win_bg = {.r=37,.g=37,.b=38,.a=255};
 RenColor frame_bg = {.r=51,.g=51,.b=55,.a=255};
@@ -71,9 +68,6 @@ RenColor text_color = {.r=255,.g=255,.b=255,.a=255};
 RenColor text_disabled_col = {.r=151,.g=151,.b=151,.a=255};
 RenColor title_bg_col = {.r=133,.g=76,.b=199,.a=255};
 
-int mouse_on_rect(mouse_t mouse,RenRect rect){
-    return mouse.x > rect.x && mouse.x < rect.x + rect.width && mouse.y > rect.y && mouse.y < rect.y + rect.height;
-}
 int get_next_line(Knob_String_Builder lines,size_t* pos, char* out_line){
     size_t i = *pos;
     while(i < lines.count && lines.items[i] != '\n'){

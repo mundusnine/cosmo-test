@@ -1,6 +1,19 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include "rencache.h"
+
+#ifdef _MSC_VER
+  #ifndef alignof
+    #define alignof _Alignof
+  #endif
+  /* max_align_t is a compiler defined type, but
+  ** MSVC doesn't provide it, so we'll have to improvise */
+  typedef long double max_align_t;
+#else
+  #include <stdalign.h>
+#endif
+
 
 /* a cache over the software renderer -- all drawing operations are stored as
 ** commands when issued. At the end of the frame we write the commands to a grid
@@ -11,20 +24,55 @@
 #define CELLS_Y 50
 #define CELL_SIZE 96
 #define COMMAND_BUF_SIZE (1024 * 512)
+#define COMMAND_BARE_SIZE offsetof(Command, command)
 
-enum { FREE_FONT, SET_CLIP, DRAW_TEXT, DRAW_LINE, DRAW_RECT, DRAW_IMG, DRAW_TRIANGLE, DRAW_CIRCLE };
+enum CommandType { FREE_FONT, SET_CLIP, DRAW_TEXT, DRAW_LINE, DRAW_RECT, DRAW_IMG, DRAW_TRIANGLE, DRAW_CIRCLE };
+
+// typedef struct {
+//   int type, size;
+//   int x0, y0, x1, y1, x2, y2;
+//   RenRect rect;
+//   RenColor color;
+//   RenFont *font;
+//   RenImage* image;
+//   int tab_width;
+//   char text[0];
+// } Command;
 
 typedef struct {
-  int type, size;
-  int x0, y0, x1, y1, x2, y2;
+  enum CommandType type;
+  uint32_t size;
+  /* Commands *must* always begin with a RenRect
+  ** This is done to ensure alignment */
+  RenRect command[];
+} Command;
+
+typedef struct {
+  RenRect rect;
+} SetClipCommand;
+
+typedef struct {
   RenRect rect;
   RenColor color;
   RenFont *font;
-  RenImage* image;
-  int tab_width;
-  char text[0];
-} Command;
+  float text_x;
+  size_t len;
+  int8_t tab_size;
+  char text[];
+} DrawTextCommand;
 
+typedef struct {
+  RenRect rect;
+  RenColor color;
+  int x0, y0, x1, y1, x2, y2;
+} DrawRectCommand;
+
+typedef struct {
+  RenRect rect;
+  RenRect sub;
+  RenColor color;
+  RenImage* image;
+} DrawImgCommand;
 
 static unsigned cells_buf1[CELLS_X * CELLS_Y];
 static unsigned cells_buf2[CELLS_X * CELLS_Y];
@@ -34,6 +82,8 @@ static RenRect rect_buf[CELLS_X * CELLS_Y / 2];
 static char command_buf[COMMAND_BUF_SIZE];
 static int command_buf_idx;
 static RenRect screen_rect;
+static bool resize_issue;
+static RenRect last_clip_rect;
 static bool show_debug;
 
 
@@ -80,7 +130,10 @@ static RenRect merge_rects(RenRect a, RenRect b) {
 }
 
 
-static Command* push_command(int type, int size) {
+static void* push_command(int type, int size) {
+  size_t alignment = alignof(max_align_t) - 1;
+  size += COMMAND_BARE_SIZE;
+  size = (size + alignment) & ~alignment;
   Command *cmd = (Command*) (command_buf + command_buf_idx);
   int n = command_buf_idx + size;
   if (n > COMMAND_BUF_SIZE) {
@@ -88,10 +141,10 @@ static Command* push_command(int type, int size) {
     return NULL;
   }
   command_buf_idx = n;
-  memset(cmd, 0, sizeof(Command));
+  memset(cmd, 0, size);
   cmd->type = type;
   cmd->size = size;
-  return cmd;
+  return cmd->command;
 }
 
 
@@ -111,20 +164,23 @@ void rencache_show_debug(bool enable) {
 
 
 void rencache_free_font(RenFont *font) {
-  Command *cmd = push_command(FREE_FONT, sizeof(Command));
+  DrawTextCommand *cmd = push_command(FREE_FONT, sizeof(DrawTextCommand));
   if (cmd) { cmd->font = font; }
 }
 
 
 void rencache_set_clip_rect(RenRect rect) {
-  Command *cmd = push_command(SET_CLIP, sizeof(Command));
-  if (cmd) { cmd->rect = intersect_rects(rect, screen_rect); }
+  SetClipCommand *cmd = push_command(SET_CLIP, sizeof(SetClipCommand));
+  if (cmd) { 
+    cmd->rect = intersect_rects(rect, screen_rect);
+    last_clip_rect = cmd->rect;
+  }
 }
 
 
 void rencache_draw_rect(RenRect rect, RenColor color) {
-  if (!rects_overlap(screen_rect, rect)) { return; }
-  Command *cmd = push_command(DRAW_RECT, sizeof(Command));
+  if (rect.width == 0 || rect.height == 0 || !rects_overlap(last_clip_rect, rect)) { return; }
+  DrawRectCommand *cmd = push_command(DRAW_RECT, sizeof(DrawRectCommand));
   if (cmd) {
     cmd->rect = rect;
     cmd->color = color;
@@ -133,12 +189,11 @@ void rencache_draw_rect(RenRect rect, RenColor color) {
 void rencache_draw_img(RenImage* img,RenRect sub,int x, int y,RenColor color){
   RenRect rect = {.x=x,.y=y,.width=sub.width,.height=sub.height};
   if (!rects_overlap(screen_rect, rect)) { return; }
-  Command *cmd = push_command(DRAW_IMG, sizeof(Command));
+  DrawImgCommand *cmd = push_command(DRAW_IMG, sizeof(DrawImgCommand));
   if (cmd) {
-    cmd->rect = sub;
+    cmd->rect = rect;
+    cmd->sub = sub;
     cmd->color = color;
-    cmd->x0 = x;
-    cmd->y0 = y;
     cmd->image = img;
   }
 }
@@ -150,7 +205,7 @@ void rencache_draw_line(int x0, int y0, int x1, int y1,RenColor color){
   rect.width = x1;
   rect.height = y1;
   if (rects_overlap(screen_rect, rect)) {
-    Command *cmd = push_command(DRAW_LINE, sizeof(Command));
+    DrawRectCommand *cmd = push_command(DRAW_LINE, sizeof(DrawRectCommand));
     if (cmd) {
       cmd->color = color;
       cmd->rect = rect;
@@ -165,7 +220,7 @@ void rencache_draw_circle(int x, int y,int r, RenColor color){
   rect.width = r * 2;
   rect.height = r * 2;
   if (rects_overlap(screen_rect, rect)) {
-    Command *cmd = push_command(DRAW_CIRCLE, sizeof(Command));
+    DrawRectCommand *cmd = push_command(DRAW_CIRCLE, sizeof(DrawRectCommand));
     if (cmd) {
       cmd->color = color;
       cmd->rect = rect;
@@ -195,7 +250,7 @@ void rencache_draw_triangle( int x1, int y1, int x2, int y2, int x3, int y3, Ren
   rect.width = maxX;
   rect.height = maxY;
   if (rects_overlap(screen_rect, rect)) {
-    Command *cmd = push_command(DRAW_TRIANGLE, sizeof(Command));
+    DrawRectCommand *cmd = push_command(DRAW_TRIANGLE, sizeof(DrawRectCommand));
     if (cmd) {
       cmd->color = color;
       cmd->rect = rect;
@@ -218,13 +273,13 @@ int rencache_draw_text(RenFont *font, const char *text, int x, int y, RenColor c
 
   if (rects_overlap(screen_rect, rect)) {
     int sz = strlen(text) + 1;
-    Command *cmd = push_command(DRAW_TEXT, sizeof(Command) + sz);
+    DrawTextCommand *cmd = push_command(DRAW_TEXT, sizeof(DrawTextCommand) + sz);
     if (cmd) {
       memcpy(cmd->text, text, sz);
       cmd->color = color;
       cmd->font = font;
       cmd->rect = rect;
-      cmd->tab_width = ren_get_font_tab_width(font);
+      cmd->tab_size = ren_get_font_tab_width(font);
     }
   }
 
@@ -246,6 +301,7 @@ void rencache_begin_frame(void) {
     screen_rect.height = h;
     rencache_invalidate();
   }
+  last_clip_rect = screen_rect;
 }
 
 
@@ -283,8 +339,8 @@ void rencache_end_frame(void) {
   Command *cmd = NULL;
   RenRect cr = screen_rect;
   while (next_command(&cmd)) {
-    if (cmd->type == SET_CLIP) { cr = cmd->rect; }
-    RenRect r = intersect_rects(cmd->rect, cr);
+    if (cmd->type == SET_CLIP) { cr = cmd->command[0]; }
+    RenRect r = intersect_rects(cmd->command[0], cr);
     if (r.width == 0 || r.height == 0) { continue; }
     unsigned h = HASH_INITIAL;
     hash(&h, cmd, cmd->size);
@@ -326,29 +382,36 @@ void rencache_end_frame(void) {
     col.b = col.a = col.g = col.r = 255;
     cmd = NULL;
     while (next_command(&cmd)) {
+      SetClipCommand *ccmd = (SetClipCommand*)&cmd->command;
+      DrawRectCommand *rcmd = (DrawRectCommand*)&cmd->command;
+      DrawTextCommand *tcmd = (DrawTextCommand*)&cmd->command;
+      DrawImgCommand *icmd = (DrawImgCommand*)&cmd->command;
       switch (cmd->type) {
         case FREE_FONT:
           has_free_commands = true;
           break;
         case SET_CLIP:
-          ren_set_clip_rect(intersect_rects(cmd->rect, r));
+          ren_set_clip_rect(intersect_rects(ccmd->rect, r));
           break;
         case DRAW_RECT:
-          ren_fill_rect(cmd->rect, cmd->color);
+          ren_fill_rect(rcmd->rect, rcmd->color);
           break;
         case DRAW_IMG:
-          ren_draw_image(cmd->image,&cmd->rect,cmd->x0,cmd->y0,cmd->color);
+          ren_draw_image(icmd->image,&icmd->sub,icmd->rect.x,icmd->rect.y,icmd->color);
           break;
         case DRAW_TEXT:
-          ren_set_font_tab_width(cmd->font, cmd->tab_width);
-          ren_draw_text(cmd->font, cmd->text, cmd->rect.x, cmd->rect.y, cmd->color);
+          ren_set_font_tab_width(tcmd->font, tcmd->tab_size);
+          ren_draw_text(tcmd->font, tcmd->text, tcmd->rect.x, tcmd->rect.y, tcmd->color);
           break;
         case DRAW_CIRCLE:
-          ren_draw_circle(cmd->rect.x,cmd->rect.y,cmd->rect.width,cmd->color);
+          ren_draw_circle(rcmd->rect.x,rcmd->rect.y,rcmd->rect.width,rcmd->color);
+          break;
         case DRAW_LINE:
-          ren_draw_line(cmd->rect.x,cmd->rect.y,cmd->rect.width,cmd->rect.height,cmd->color);
+          ren_draw_line(rcmd->rect.x,rcmd->rect.y,rcmd->rect.width,rcmd->rect.height,rcmd->color);
+          break;
         case DRAW_TRIANGLE:
-          ren_draw_triangle(cmd->x0,cmd->y0,cmd->x1,cmd->y1,cmd->x2,cmd->y2,cmd->color);
+          ren_draw_triangle(rcmd->x0,rcmd->y0,rcmd->x1,rcmd->y1,rcmd->x2,rcmd->y2,rcmd->color);
+          break;
       }
     }
 
@@ -368,7 +431,8 @@ void rencache_end_frame(void) {
     cmd = NULL;
     while (next_command(&cmd)) {
       if (cmd->type == FREE_FONT) {
-        ren_free_font(cmd->font);
+        DrawTextCommand *tcmd = (DrawTextCommand*)&cmd->command;
+        ren_free_font(tcmd->font);
       }
     }
   }

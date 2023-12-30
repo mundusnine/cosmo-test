@@ -7,6 +7,8 @@
 
 #include "rencache.h"
 #include "plug.h"
+#define INPUT_IMPL
+#include "input.h"
 
 //ASCII Table: https://theasciicode.com.ar/
 
@@ -100,10 +102,7 @@ int IsOp(char c){
     return 0;
 }
 
-typedef struct {
-    float x,y;
-    int l,m,r;
-} mouse_t;
+
 double calc(char* left, char* right, char op){
     // if(right[0] == '\0') return 0;
     char* end;
@@ -354,7 +353,7 @@ void plug_update(void){
             butt_col = butt_equl_col;
         }
         RenRect butt_rect = {.x=curr_x + i*(butt_w+b_pad*2.5),.y=grid_y*(butt_w+b_pad*2.5)+current_y,.width=butt_w,.height=butt_h};
-        if(mouse.x > butt_rect.x && mouse.x < butt_rect.x + butt_rect.width && mouse.y > butt_rect.y && mouse.y < butt_rect.y + butt_rect.height){
+        if(mouse_on_rect(mouse,butt_rect)){
             butt_col = button_hovered_col;
             if(mouse.l && last_mouse.l != mouse.l){
                 butt_col = button_click_col;

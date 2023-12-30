@@ -17,35 +17,7 @@
 #define DLL_COMPILE
 #include "dll.h"
 #include "hotreload.h"
-
-enum KEY {
-    KEY_A = 65,
-    KEY_B,
-    KEY_C,
-    KEY_D,
-    KEY_E,
-    KEY_F,
-    KEY_G,
-    KEY_H,
-    KEY_I,
-    KEY_J,
-    KEY_K,
-    KEY_L,
-    KEY_M,
-    KEY_N,
-    KEY_O,
-    KEY_P,
-    KEY_Q,
-    KEY_R,
-    KEY_S,
-    KEY_T,
-    KEY_U,
-    KEY_V,
-    KEY_W,
-    KEY_X,
-    KEY_Y,
-    KEY_Z
-};
+#include "input.h"
 
 #define LOAD_FUN(name) name = dlsym(lib,#name)
 void load_fenster(void* lib){
@@ -72,23 +44,10 @@ int main(int argc, char* argv[]){
     //@TODO: Fix linux behaviour, we get the two diplay's size together instead of just the current Display.
     fenster_screen_size(&w,&h);
     fenster_t* f = plug_init(w,h);
-    // f->buf = malloc(f->width * f->height);
     fenster_open(f);
     uint32_t t = 0;
     int64_t now = fenster_time();
     while (fenster_loop(f) == 0) {
-        // int has_keys = 0;
-        // char s[32];
-        // char *p = s;
-        // for (int i = 0; i < 128; i++) {
-        // if (f->keys[i]) {
-        //     has_keys = 1;
-        //     *p++ = i;
-        // }
-        // }
-        // *p = '\0';
-        // if(s[0] != '\0')
-        //     fprintf(stdout,"Keys that were touched: %s\n",s);
         if(f->keys[KEY_R]){
             void *state = plug_pre_reload();
             lib = reload_libplug();

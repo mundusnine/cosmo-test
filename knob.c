@@ -16,7 +16,8 @@ const int arg_len = sizeof(args)/sizeof(args[0]);
 char* valid_apps[] = {
     "basic",
     "calc",
-    "todo"
+    "todo",
+    "clock"
 };
 
 #define INCLUDES "-I./Libraries/fenster","-I.","-I./src","-I./build"
