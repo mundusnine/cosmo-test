@@ -138,7 +138,7 @@ MAIN(test_build){
     }
     knob_cmd_append(&cmd,"-o",knob_temp_sprintf("./Deployment/%s.com.dbg",app_name));
     #else
-    knob_cmd_append(&cmd,"-o",knob_temp_sprintf("./Deployment/%s.com"),app_name));
+    knob_cmd_append(&cmd,"-o",knob_temp_sprintf("./Deployment/%s.com",app_name));
     #endif
     #ifndef KNOB_HOTRELOAD
     knob_cmd_append(&cmd,knob_temp_sprintf("./apps/%s/%s.c",app_name,app_name),"./src/renderer.c","./src/rencache.c","./src/stb_truetype.c");
