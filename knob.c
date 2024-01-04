@@ -10,7 +10,8 @@ extern const int __hostos;
 
 char* args[] = {
     "dll",
-    "app"
+    "app",
+    "mingw"
 };
 const int arg_len = sizeof(args)/sizeof(args[0]);
 char* valid_apps[] = {
@@ -23,19 +24,22 @@ char* valid_apps[] = {
 #define INCLUDES "-I./Libraries/fenster","-I.","-I./src","-I./build"
 const int valid_apps_len = sizeof(valid_apps)/sizeof(valid_apps[0]);
 //@TODO: Add config.h i.e. stage one of build to create an easy to configure config.h file to enable, among other things, mingw build
-//@TODO: Add mingw64 build
 MAIN(test_build){
     
     knob_log(KNOB_INFO, "--- STAGE 2 ---");
 
     char* program = knob_shift_args(&argc,&argv);
     int is_dll = 0;// argc > 0 ? knob_shift_args(&argc,&argv) : "";
+    int build_win = 0;
     char* app_name = "basic";//calc, todo
     
     while(argc > 0){
         char* arg = knob_shift_args(&argc,&argv);
         if(knob_cstr_match(arg,"--dll")){
             is_dll = 1;
+        }
+        else if(knob_cstr_match(arg,"--mingw")){
+            build_win = 1;
         }
         else if(knob_cstr_match(arg,"--app")){
             if(argc > 0){
@@ -73,21 +77,26 @@ MAIN(test_build){
     //Build .so+
     //@TODO: Replace by zig
     char* dll_ext = ".so";
-    if(IsWindows()){
+    char* exe_ext = "";
+    int is_win = IsWindows() || build_win;
+    if(is_win){
+        if(IsWindows()){
+            exe_ext = ".exe";
+        }
         dll_ext = ".dll";
-        knob_cmd_append(&cmd,"./zig/zig.exe");
+        knob_cmd_append(&cmd,knob_temp_sprintf("./zig/zig",exe_ext));
     }
-    knob_cmd_append(&cmd,"cc",INCLUDES,"-ggdb3","-shared","-fPIC","./src/dll.c");
-    if(IsLinux()){
+    knob_cmd_append(&cmd,"cc",INCLUDES,"-ggdb3","-shared","./src/dll.c");
+    if(IsLinux() && !is_win){
         //@TODO: Add wayland support when wayland is supported for NVIDIA GPU's...
         // knob_cmd_append(&cmd,"-lwayland-client");
-        knob_cmd_append(&cmd,"-lX11","-lXinerama");
+        knob_cmd_append(&cmd,"-lX11","-lXinerama","-fPIC");
         knob_cmd_append(&cmd,"-lasound");
     }
-    else if(IsWindows()){
+    else if(is_win){
         knob_cmd_append(&cmd,"-std=c11", "-fno-sanitize=undefined","-fno-omit-frame-pointer");
         knob_cmd_append(&cmd, "-target");
-        knob_cmd_append(&cmd, "x86_64-windows");
+        knob_cmd_append(&cmd, "x86_64-windows-gnu");
         knob_cmd_append(&cmd,"-lgdi32","-lwinmm");
     }
     else if(IsXnu()){
@@ -107,8 +116,11 @@ MAIN(test_build){
     }
     cmd.count = 0;
     #ifdef NOT_COSMO
-    if(IsWindows()){
-        knob_cmd_append(&cmd,"./zig/zig.exe");
+    if(is_win){
+        if(IsWindows()){
+            exe_ext = ".exe";
+        }
+        knob_cmd_append(&cmd,knob_temp_sprintf("./zig/zig",exe_ext));
     }
     knob_cmd_append(&cmd,"cc","-DNOT_COSMO");
     #else
@@ -119,8 +131,10 @@ MAIN(test_build){
     knob_cmd_append(&cmd,INCLUDES,"-g","main.c","hotreload.c");
 
     #ifdef NOT_COSMO
-    if(IsWindows()){
+    if(is_win){
         knob_cmd_append(&cmd,"-ggdb3", "-std=c11", "-fno-sanitize=undefined","-fno-omit-frame-pointer");
+        knob_cmd_append(&cmd, "-target");
+        knob_cmd_append(&cmd, "x86_64-windows-gnu");
     }
     knob_cmd_append(&cmd,"-o",knob_temp_sprintf("./Deployment/%s.com.dbg",app_name));
     #else

@@ -25,6 +25,27 @@
         "__tuple": "c",
         "array": "c",
         "stat.h": "c",
-        "cstring": "c"
-    }
+        "cstring": "c",
+        "stb_image.h": "c",
+        "__bit_reference": "c",
+        "algorithm": "c",
+        "bitset": "c",
+        "map": "c",
+        "set": "c",
+        "unordered_map": "c",
+        "unordered_set": "c",
+        "hash_map": "c",
+        "format": "c",
+        "xlib.h": "c",
+        "xkblib.h": "c",
+        "keysym.h": "c",
+        "keysymdef.h": "c",
+        "__locale": "c"
+    },
+    "cppdbg.debuggerLogging": true,
+    "executable": "calc",// Choosen between: basic,calc,clock,todo
+    "libc": "--mingw",//Choose between: nothing,--mingw,
+    "mingwPath": "/usr/x86_64-w64-mingw32",// change me based on your system
+    "winePath": "/home/winesap/.config/heroic/tools/wine/Wine-GE-latest/bin",// change me based on your system
+    
 }

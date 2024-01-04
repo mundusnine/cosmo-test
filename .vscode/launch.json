@@ -5,7 +5,7 @@
         "name": "Debug app(Linux)",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/Deployment/calc.com.dbg",
+        "program": "${workspaceFolder}/Deployment/${config:executable}.com.dbg",
         "args": ["--strace"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}/Deployment",
@@ -20,11 +20,46 @@
         "preLaunchTask": "Build app"
       },
       {
+        //Use method outlined here: https://github.com/aleksas/vscode-wine-mingw-boilerplate/tree/master
+        //When using apt to install, the cross-debugger is included i.e. apt install gdb-mingw-w64 gdb-mingw-w64-target
+        //Since we are using Arch we need to compile it ourselves... i.e. ./configure --host=x86_64-pc-linux --target=x86_64-pc-windows-gnu
+        // Pertinent: https://medium.com/@maxmeinhardt/remote-cross-platform-debugging-with-gdb-30f49ba8a9c8
+        "name": "Debug app(Windows-Gnu)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/Deployment/${config:executable}.com.dbg",
+        "args": ["--strace"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}/Deployment",
+        "environment": [],
+        // "miDebuggerPath": "/home/winesap/mingw-w64-gdb/gdb-13.2/gdb/gdb",
+        // "debugServerPath": "${config:winePath}/wine64",
+        // "debugServerArgs": "${config:mingwPath}/bin/gdbserver.exe localhost:1111 ${workspaceFolder}/Deployment/${config:executable}.com.dbg",
+        // "serverStarted":"Listening\\ on\\ port\\ \\d*",
+        // "filterStderr":true,
+        // "filterStdout":false,
+        // "logging": {
+        //     "moduleLoad": true,
+        //     // "trace": true,
+        //     // "engineLogging": true,
+        //     "programOutput": true,
+        //     "exceptions": true
+        // },
+        "setupCommands": [
+          // { "text": "-target-select remote localhost:1111", "description": "connect to target", "ignoreFailures": false },
+          // { "text": "-symbol-file ${workspaceFolder}/Deployment/${config:executable}.pdb", "description": "Add symbol file for exe", "ignoreFailures": false},
+          // { "text": "-symbol-file ${workspaceFolder}/Deployment/libplug.pdb", "description": "Add symbol file for dll", "ignoreFailures": false},
+          { "text": "-enable-pretty-printing","description": "Enable pretty-printing for gdb","ignoreFailures": true },
+        ],
+        "preLaunchTask": "Build app",
+        // "postDebugTask": "pkill gdbserver"
+      },
+      {
         "name": "Debug knob.com",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/knob.com.dbg",
-        "args": ["--app","calc"],
+        "args": ["--app","${config:executable}","${config:libc}"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -59,7 +94,7 @@
         "name": "Debug app(Windows)",
         "type": "cppvsdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/Deployment/calc.com.dbg",
+        "program": "${workspaceFolder}/Deployment/${config:executable}.com.dbg",
         "args": ["--strace"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}/Deployment",

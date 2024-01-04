@@ -25,14 +25,14 @@
             "label": "Build app",
             "type": "shell",
             "command": "${workspaceFolder}/knob.com",
-            "args": ["--app","todo"],
+            "args": ["--app","${config:executable}","${config:libc}"],
             "dependsOn": "Build knob",
         },
         {
             "label": "Build dll",
             "type": "shell",
             "command": "${workspaceFolder}/knob.com",
-            "args": ["--dll","--app","todo"],
+            "args": ["--dll","--app","${config:executable}","${config:libc}"],
             "dependsOn": "Build knob",
             "group": {
                 "kind": "build",
@@ -47,5 +47,15 @@
                 "cwd": "${workspaceFolder}/gf"
             }
         },
-    ]
+        {
+            "label": "pkill gdbserver",
+            "type": "shell",
+            "command": "pkill gdbserver || true",
+            "group": "test",
+            "presentation": {
+                "reveal": "never",
+                "panel": "shared"
+            }
+        }
+    ],
 }
